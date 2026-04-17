@@ -339,6 +339,41 @@ export function maybeSeedDemoData(userId: string): void {
   };
   write(CELEBRATIONS_KEY, celebs);
 
+  // Seed slides for each published celebration so opening `/c/:slug` renders
+  // the experience instead of a blank screen. Drafts (Rahul) stay slideless
+  // since they aren't reachable from the public URL anyway.
+  const slidesByCelebration: SlideMap = {
+    [moli.id]: makeSeedSlides(moli.id, {
+      heroTitle: 'Happy Birthday, Moli!',
+      heroSubtitle: 'One year wiser, a hundred times lovelier',
+      letter: [
+        'Hey you — another year, another chapter of the chaos we call friendship.',
+        'Every birthday reminds me how lucky I am to know someone as kind and utterly yourself as you. Keep being that.',
+        'Here\'s to the inside jokes, the 3am rants, and whatever we get up to this year. Go make it count. 💖',
+      ],
+      giftTitle: 'Agentic AI Course',
+      giftUrl: 'https://example.com/course',
+    }),
+    [arjun.id]: makeSeedSlides(arjun.id, {
+      heroTitle: 'Happy Birthday, Arjun!',
+      heroSubtitle: 'From one birthday boy to another',
+      letter: [
+        'Happy birthday, legend. Keep being the funniest person in every room.',
+        'This year, I hope you find more reasons to laugh than to worry. Love you, man.',
+      ],
+    }),
+    [priya.id]: makeSeedSlides(priya.id, {
+      heroTitle: 'Happy Anniversary, Priya!',
+      heroSubtitle: 'Another year of us',
+      letter: [
+        'To the one who makes every ordinary day feel like a soft-focus Bollywood montage.',
+        'Thank you for the laughter, the patience, and the thousand small kindnesses I forget to notice. I see them. I see you.',
+        'Here\'s to us — always. 💍',
+      ],
+    }),
+  };
+  write(SLIDES_KEY, slidesByCelebration);
+
   // Seed replies for Moli + Priya
   const replies: ReplyMap = {
     [moli.id]: [
@@ -470,6 +505,61 @@ function makeCeleb(args: MakeCelebArgs): Celebration {
     publishedAt: args.publishedAt,
     deletedAt: null,
   };
+}
+
+interface SeedSlideArgs {
+  heroTitle: string;
+  heroSubtitle: string;
+  letter: string[];
+  giftTitle?: string;
+  giftUrl?: string;
+}
+
+function makeSeedSlides(celebrationId: string, args: SeedSlideArgs): Slide[] {
+  const nowIso = new Date().toISOString();
+  const slides: Array<Omit<Slide, 'celebrationId' | 'createdAt' | 'updatedAt'>> = [
+    {
+      id: `slide-${celebrationId}-hero`,
+      slideType: 'hero',
+      sortOrder: 0,
+      content: { title: args.heroTitle, subtitle: args.heroSubtitle },
+      interactions: {},
+    },
+    {
+      id: `slide-${celebrationId}-letter`,
+      slideType: 'letter',
+      sortOrder: 1,
+      content: { paragraphs: args.letter, signature: '' },
+      interactions: {},
+    },
+    {
+      id: `slide-${celebrationId}-candle`,
+      slideType: 'candle_blow',
+      sortOrder: 2,
+      content: {},
+      interactions: {},
+    },
+  ];
+
+  if (args.giftUrl) {
+    slides.push({
+      id: `slide-${celebrationId}-gift`,
+      slideType: 'gift_reveal',
+      sortOrder: slides.length,
+      content: { giftTitle: args.giftTitle || 'Your gift', giftUrl: args.giftUrl },
+      interactions: {},
+    });
+  }
+
+  slides.push({
+    id: `slide-${celebrationId}-thanks`,
+    slideType: 'thank_you',
+    sortOrder: slides.length,
+    content: {},
+    interactions: {},
+  });
+
+  return slides.map((s) => ({ ...s, celebrationId, createdAt: nowIso, updatedAt: nowIso }));
 }
 
 export function resetDemoData(): void {
