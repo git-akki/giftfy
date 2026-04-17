@@ -1,0 +1,181 @@
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Dancing+Script:wght@400;500;600;700&family=Caveat:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 350 30% 97%;
+    --foreground: 340 30% 18%;
+
+    --card: 350 25% 95%;
+    --card-foreground: 340 30% 18%;
+
+    --popover: 350 25% 95%;
+    --popover-foreground: 340 30% 18%;
+
+    --primary: 345 55% 60%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 340 40% 92%;
+    --secondary-foreground: 340 30% 25%;
+
+    --muted: 340 20% 92%;
+    --muted-foreground: 340 15% 50%;
+
+    --accent: 320 30% 85%;
+    --accent-foreground: 320 40% 25%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 340 20% 90%;
+    --input: 340 20% 90%;
+    --ring: 345 55% 60%;
+
+    --radius: 1rem;
+
+    --peach: 15 70% 88%;
+    --lavender: 280 35% 90%;
+    --mint: 160 35% 88%;
+    --sunshine: 42 80% 88%;
+    --blush: 350 45% 92%;
+    --rose-glow: 345 60% 70%;
+    --warm-pink: 340 50% 80%;
+
+    --font-display: 'Dancing Script', cursive;
+    --font-body: 'Quicksand', sans-serif;
+    --font-handwritten: 'Caveat', cursive;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-body);
+  }
+  h1, h2, h3 {
+    font-family: var(--font-display);
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: var(--font-display);
+  }
+  .font-body {
+    font-family: var(--font-body);
+  }
+  .font-handwritten {
+    font-family: var(--font-handwritten);
+  }
+}
+
+/* Romantic glow effects */
+@layer utilities {
+  .glow-rose {
+    box-shadow: 0 0 30px hsl(345 55% 60% / 0.15), 0 0 60px hsl(345 55% 60% / 0.08);
+  }
+  .glow-soft {
+    box-shadow: 0 8px 32px hsl(345 55% 60% / 0.12);
+  }
+  .text-gradient-romantic {
+    background: linear-gradient(135deg, hsl(345 55% 55%), hsl(320 40% 65%), hsl(280 35% 65%));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--primary) / 0.2);
+  border-radius: 2px;
+}
+
+/* Heartbeat pulse */
+@keyframes heartbeat {
+  0%, 100% { transform: scale(1); }
+  15% { transform: scale(1.15); }
+  30% { transform: scale(1); }
+  45% { transform: scale(1.1); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes gentle-float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  33% { transform: translateY(-8px) rotate(1deg); }
+  66% { transform: translateY(-4px) rotate(-1deg); }
+}
+
+.animate-heartbeat {
+  animation: heartbeat 1.5s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  background-size: 200% auto;
+  animation: shimmer 3s linear infinite;
+}
+
+.animate-gentle-float {
+  animation: gentle-float 6s ease-in-out infinite;
+}
+
+/* Giftfy brand utilities */
+@layer utilities {
+  .text-gradient-giftfy {
+    background: linear-gradient(135deg, #ec4899, #f472b6, #c084fc);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .glow-giftfy {
+    box-shadow: 0 0 30px rgba(236, 72, 153, 0.15), 0 0 60px rgba(236, 72, 153, 0.08);
+  }
+  .glow-giftfy-strong {
+    box-shadow: 0 4px 25px rgba(236, 72, 153, 0.3);
+  }
+  .glass-card {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+  }
+  .gradient-btn {
+    background: linear-gradient(135deg, #ec4899, #f472b6);
+  }
+  .gradient-btn:hover {
+    background: linear-gradient(135deg, #db2777, #ec4899);
+  }
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  animation: marquee 30s linear infinite;
+}

@@ -1,0 +1,247 @@
+// Giftfy — Prisma schema (reference ORM implementation)
+// ---------------------------------------------------------------------------
+// Mirror of docs/DATA-MODEL.md. Works with Postgres (tested) or any Prisma
+// datasource. To use:
+//
+//   cd db/prisma
+//   npm init -y && npm install prisma @prisma/client
+//   npx prisma init --datasource-provider postgresql
+//   # (replace the generated schema.prisma with THIS file)
+//   echo 'DATABASE_URL="postgresql://user:pass@localhost:5432/giftfy"' > .env
+//   npx prisma migrate dev --name init
+//
+// Prisma will create exactly the tables and indexes defined in db/schema.sql.
+// You can use either approach; do not use both at once — pick one migration
+// source of truth.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum OccasionType {
+  birthday
+  anniversary
+  graduation
+  congratulations
+  custom
+}
+
+enum CelebrationStatus {
+  draft
+  published
+  archived
+}
+
+enum VibeType {
+  warm
+  playful
+  romantic
+  minimal
+}
+
+enum TierType {
+  free
+  sweet
+  premium
+  deluxe
+}
+
+enum SlideType {
+  hero
+  traits
+  photo_wall
+  chat_replay
+  letter
+  voice_note
+  candle_blow
+  gift_reveal
+  thank_you
+}
+
+enum ReplyType {
+  text
+  voice
+  emoji
+}
+
+enum EventType {
+  page_view
+  slide_enter
+  slide_exit
+  interaction
+}
+
+enum PaymentProvider {
+  razorpay
+  demo
+}
+
+enum PaymentStatus {
+  captured
+  failed
+  refunded
+}
+
+// ─── Models ──────────────────────────────────────────────────────────────────
+
+model Profile {
+  id        String   @id
+  email     String?
+  fullName  String?  @map("full_name")
+  avatarUrl String?  @map("avatar_url")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  celebrations Celebration[]
+  apiKeys      ApiKey[]
+  payments     Payment[]
+
+  @@index([email])
+  @@map("profiles")
+}
+
+model Celebration {
+  id                   String             @id @default(uuid()) @db.Uuid
+  creatorId            String             @map("creator_id")
+  recipientName        String             @map("recipient_name")
+  recipientPhotoUrl    String?            @map("recipient_photo_url")
+  photoCount           Int                @default(0) @map("photo_count")
+  occasion             OccasionType
+  customOccasion       String?            @map("custom_occasion")
+  occasionDate         DateTime?          @map("occasion_date") @db.Date
+  slug                 String             @unique
+  customSlug           String?            @map("custom_slug")
+  status               CelebrationStatus  @default(draft)
+  vibe                 VibeType           @default(warm)
+  template             String             @default("classic")
+  tier                 TierType           @default(free)
+  musicTrackId         String?            @map("music_track_id")
+  customMusicUrl       String?            @map("custom_music_url")
+  videoUrl             String?            @map("video_url")
+  scheduledRevealAt    DateTime?          @map("scheduled_reveal_at")
+  password             String?
+  expiresAt            DateTime?          @map("expires_at")
+  viewCount            Int                @default(0) @map("view_count")
+  uniqueViewers        Int                @default(0) @map("unique_viewers")
+  firstViewedAt        DateTime?          @map("first_viewed_at")
+  chatAnalysis         Json?              @map("chat_analysis")
+  voiceNoteUrl         String?            @map("voice_note_url")
+  voiceNoteDurationMs  Int?               @map("voice_note_duration_ms")
+  giftTitle            String?            @map("gift_title")
+  giftUrl              String?            @map("gift_url")
+  giftDescription      String?            @map("gift_description")
+  createdAt            DateTime           @default(now()) @map("created_at")
+  updatedAt            DateTime           @updatedAt @map("updated_at")
+  publishedAt          DateTime?          @map("published_at")
+  // Soft-delete. Queries must filter WHERE deletedAt IS NULL.
+  deletedAt            DateTime?          @map("deleted_at")
+
+  creator    Profile      @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  slides     Slide[]
+  replies    Reply[]
+  viewEvents ViewEvent[]
+  payments   Payment[]
+
+  @@index([creatorId, createdAt(sort: Desc)])
+  @@index([slug, status])
+  @@index([occasionDate])
+  @@map("celebrations")
+}
+
+model Slide {
+  id             String    @id @default(uuid()) @db.Uuid
+  celebrationId  String    @map("celebration_id") @db.Uuid
+  slideType      SlideType @map("slide_type")
+  sortOrder      Int       @map("sort_order")
+  content        Json      @default("{}")
+  interactions   Json      @default("{}")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  celebration Celebration @relation(fields: [celebrationId], references: [id], onDelete: Cascade)
+  viewEvents  ViewEvent[]
+
+  @@unique([celebrationId, sortOrder])
+  @@index([celebrationId, sortOrder])
+  @@map("slides")
+}
+
+model Reply {
+  id             String    @id @default(uuid()) @db.Uuid
+  celebrationId  String    @map("celebration_id") @db.Uuid
+  replyType      ReplyType @map("reply_type")
+  textContent    String?   @map("text_content")
+  voiceUrl       String?   @map("voice_url")
+  emoji          String?
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  celebration Celebration @relation(fields: [celebrationId], references: [id], onDelete: Cascade)
+
+  // NOTE: Prisma does not support SQL CHECK constraints in the schema.
+  // The equivalent validation lives in db/schema.sql. Enforce it in app
+  // code too (services/thank-you.ts + firestore.rules).
+
+  @@index([celebrationId, createdAt(sort: Desc)])
+  @@map("replies")
+}
+
+model ViewEvent {
+  id             String    @id @default(uuid()) @db.Uuid
+  celebrationId  String    @map("celebration_id") @db.Uuid
+  viewerId       String?   @map("viewer_id")
+  slideId        String?   @map("slide_id") @db.Uuid
+  eventType      EventType @map("event_type")
+  durationMs     Int?      @map("duration_ms")
+  action         String?
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  celebration Celebration @relation(fields: [celebrationId], references: [id], onDelete: Cascade)
+  slide       Slide?      @relation(fields: [slideId], references: [id], onDelete: SetNull)
+
+  @@index([celebrationId, createdAt])
+  @@index([celebrationId, viewerId])
+  @@map("view_events")
+}
+
+model ApiKey {
+  id          String    @id @default(uuid()) @db.Uuid
+  userId      String    @map("user_id")
+  keyHash     String    @unique @map("key_hash")
+  keyHint     String    @map("key_hint")
+  name        String    @default("Default")
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  lastUsedAt  DateTime? @map("last_used_at")
+
+  user Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isActive])
+  @@map("api_keys")
+}
+
+model Payment {
+  id                 String          @id @default(uuid()) @db.Uuid
+  userId             String          @map("user_id")
+  celebrationId      String          @map("celebration_id") @db.Uuid
+  tier               TierType
+  amountPaise        Int             @map("amount_paise")
+  currency           String          @default("INR")
+  provider           PaymentProvider
+  providerPaymentId  String          @map("provider_payment_id")
+  status             PaymentStatus   @default(captured)
+  createdAt          DateTime        @default(now()) @map("created_at")
+
+  user        Profile     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  celebration Celebration @relation(fields: [celebrationId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerPaymentId])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([celebrationId])
+  @@map("payments")
+}

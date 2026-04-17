@@ -1,0 +1,83 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isValidPayment(data) {
+      return data.keys().hasAll(['userId', 'celebrationId', 'tier', 'amountPaise',
+                                 'currency', 'provider', 'providerPaymentId',
+                                 'status', 'createdAt'])
+          && data.tier in ['sweet', 'premium', 'deluxe']
+          && data.amountPaise is int
+          && data.amountPaise > 0
+          && data.currency == 'INR'
+          && data.celebrationId is string
+          && data.celebrationId.size() > 0
+          && data.provider in ['razorpay', 'demo']
+          && data.status == 'captured'
+          && data.providerPaymentId is string
+          && data.providerPaymentId.size() > 0;
+    }
+
+    function isValidReply(data) {
+      return data.keys().hasOnly(['replyType', 'textContent', 'voiceUrl', 'emoji', 'createdAt'])
+          && data.replyType in ['text', 'voice', 'emoji']
+          && (
+               (data.replyType == 'text'
+                 && data.textContent is string
+                 && data.textContent.size() > 0
+                 && data.textContent.size() <= 500)
+            || (data.replyType == 'voice'
+                 && data.voiceUrl is string
+                 && data.voiceUrl.matches('^https://firebasestorage.googleapis.com/.*'))
+            || (data.replyType == 'emoji'
+                 && data.emoji is string
+                 && data.emoji.size() <= 8)
+          );
+    }
+
+    match /profiles/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    match /payments/{paymentId} {
+      // Doc IDs are deterministic: `{provider}__{providerPaymentId}`. A retry
+      // with the same Razorpay payment ID hits setDoc against an existing doc,
+      // which the rules below treat as an update and reject — first write wins,
+      // so we never duplicate audit rows even without SQL's UNIQUE guarantee.
+      allow create: if request.auth != null
+                    && request.auth.uid == request.resource.data.userId
+                    && isValidPayment(request.resource.data);
+      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
+      // No update/delete — payments are immutable audit records.
+    }
+
+    match /celebrations/{celebrationId} {
+      allow read: if resource.data.status == 'published'
+                  || (request.auth != null && request.auth.uid == resource.data.creatorId);
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.creatorId;
+
+      match /slides/{slideId} {
+        allow read: if get(/databases/$(database)/documents/celebrations/$(celebrationId)).data.status == 'published'
+                    || (request.auth != null && request.auth.uid == get(/databases/$(database)/documents/celebrations/$(celebrationId)).data.creatorId);
+        allow write: if request.auth != null
+                     && request.auth.uid == get(/databases/$(database)/documents/celebrations/$(celebrationId)).data.creatorId;
+      }
+
+      match /viewEvents/{eventId} {
+        allow create: if true;
+        allow read: if request.auth != null
+                    && request.auth.uid == get(/databases/$(database)/documents/celebrations/$(celebrationId)).data.creatorId;
+      }
+
+      match /replies/{replyId} {
+        // Anyone can send a reply (recipients are not authenticated), but the
+        // shape is strictly validated so inbox UI can't be spammed with junk.
+        allow create: if isValidReply(request.resource.data);
+        allow read: if request.auth != null
+                    && request.auth.uid == get(/databases/$(database)/documents/celebrations/$(celebrationId)).data.creatorId;
+      }
+    }
+  }
+}
