@@ -4,7 +4,36 @@ import { SLIDE_TYPES } from '@/lib/constants';
 import { motion, AnimatePresence } from 'framer-motion';
 import { triggerCelebration } from './MicroCelebration';
 import SlideConfigPanel from './SlideConfigPanel';
-import type { SlideType } from '@/lib/types';
+import type { SlideType, SlideConfig, CelebrationDraft } from '@/lib/types';
+
+// Returns null if the slide will appear on publish; otherwise a short
+// reason the recipient won't see it (so the builder can call it out).
+// Must stay in sync with the filter in PreviewStep.handlePublish.
+function needsContent(slide: SlideConfig, draft: CelebrationDraft): string | null {
+  const content = slide.content as Record<string, unknown>;
+  switch (slide.type) {
+    case 'traits':
+      return (Array.isArray(content.items) && content.items.length > 0)
+        ? null : 'Needs chat analysis';
+    case 'photo_wall':
+      return draft.photos.length > 0 ? null : 'Needs photos';
+    case 'chat_replay':
+      return (Array.isArray(content.messages) && content.messages.length > 0)
+        ? null : 'Needs chat analysis';
+    case 'letter': {
+      const paras = (content.paragraphs as string[] | undefined)
+        ?? (typeof content.body === 'string' ? [content.body] : []);
+      return paras.some((p) => typeof p === 'string' && p.trim().length > 0)
+        ? null : 'Needs a message';
+    }
+    case 'gift_reveal':
+      return (content.giftUrl || draft.giftUrl) ? null : 'Needs a gift link';
+    case 'voice_note':
+      return draft.voiceNoteBlob ? null : 'Needs a voice note';
+    default:
+      return null;
+  }
+}
 
 const SlidesStep = () => {
   const { draft, addSlide, removeSlide, reorderSlides, setStep } = useBuilder();
@@ -28,14 +57,14 @@ const SlidesStep = () => {
     <div className="space-y-6">
       <div>
         <h2 className="font-display font-bold text-foreground text-lg mb-1">Your slides</h2>
-        <p className="font-body text-muted-foreground text-xs">Tap to edit · drag to reorder</p>
+        <p className="font-body text-muted-foreground text-xs">Tap to edit · drag to reorder. Slides without content are skipped at publish.</p>
       </div>
 
       {/* Slide list */}
       <div className="space-y-2">
         {draft.slides.map((slide, i) => {
           const info = getSlideInfo(slide.type);
-          const hasContent = Object.keys(slide.content).length > 0;
+          const missing = needsContent(slide, draft);
 
           return (
             <motion.div
@@ -46,6 +75,7 @@ const SlidesStep = () => {
               style={{
                 background: 'hsl(0 0% 100%)',
                 boxShadow: '0 1px 4px hsl(0 0% 0% / 0.04), 0 0 0 1px hsl(0 0% 0% / 0.03)',
+                opacity: missing ? 0.55 : 1,
               }}
               onClick={() => setEditingSlide(slide.id)}
             >
@@ -62,11 +92,16 @@ const SlidesStep = () => {
                 <div className="flex items-center gap-1.5">
                   <span className="text-base">{info?.emoji}</span>
                   <p className="font-body font-bold text-foreground text-xs">{info?.label}</p>
-                  {hasContent && (
+                  {!missing && (
                     <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: 'hsl(150 50% 50%)' }} />
                   )}
                 </div>
-                <p className="font-body text-muted-foreground text-[9px] mt-0.5">{info?.desc}</p>
+                <p
+                  className="font-body text-[9px] mt-0.5"
+                  style={{ color: missing ? 'hsl(30 80% 45%)' : 'hsl(0 0% 55%)' }}
+                >
+                  {missing ?? info?.desc}
+                </p>
               </div>
 
               {/* Edit hint */}

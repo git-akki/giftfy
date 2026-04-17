@@ -177,6 +177,34 @@ const PreviewStep = () => {
         return slide;
       });
 
+      // Drop slides the user never gave content for. The recipient view
+      // already skips these via isSlideEmpty, but we also strip them here so
+      // they never hit the database — keeps /c/:slug tidy and saves writes.
+      // hero / candle_blow / thank_you are always kept (they work without
+      // user content).
+      const publishedSlides = slidesWithPhotos.filter((slide) => {
+        const content = slide.content as Record<string, unknown>;
+        switch (slide.type) {
+          case 'traits':
+            return Array.isArray(content.items) && content.items.length > 0;
+          case 'photo_wall':
+            return Array.isArray(content.photos) && content.photos.length > 0;
+          case 'chat_replay':
+            return Array.isArray(content.messages) && content.messages.length > 0;
+          case 'letter': {
+            const paras = (content.paragraphs as string[] | undefined)
+              ?? (typeof content.body === 'string' ? [content.body] : []);
+            return paras.some((p) => typeof p === 'string' && p.trim().length > 0);
+          }
+          case 'gift_reveal':
+            return Boolean(content.giftUrl || draft.giftUrl);
+          case 'voice_note':
+            return Boolean(voiceNoteUrl);
+          default:
+            return true; // hero, candle_blow, thank_you
+        }
+      });
+
       const tierConfig = getTierConfig(draft.tier || 'free');
       const expiresAt = tierConfig.expiresInDays > 0
         ? new Date(Date.now() + tierConfig.expiresInDays * 24 * 60 * 60 * 1000).toISOString()
@@ -220,7 +248,7 @@ const PreviewStep = () => {
           status: 'published',
           publishedAt: new Date().toISOString(),
         }),
-        createSlides(celebrationId, slidesWithPhotos),
+        createSlides(celebrationId, publishedSlides),
       ]);
 
       if (cancelledRef.current) {
