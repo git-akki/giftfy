@@ -5,6 +5,8 @@
 
 A web app for creating personalized digital gift pages (birthdays, anniversaries, thank-yous) that can be shared via a link. Built with React, TypeScript, Vite, Tailwind CSS, shadcn/ui, Firebase, and Razorpay.
 
+> **Want the AI to set it up for you?** Copy [`docs/SETUP-PROMPT.md`](docs/SETUP-PROMPT.md) into Claude Code, Cursor, or any AI coding assistant and it'll walk you through cloning, wiring Firebase + Razorpay, and deploying to Vercel under your own account.
+
 ## Features
 
 - 🎁 **Multi-step builder** — occasion → content → slide editor → preview/publish
