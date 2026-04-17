@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { createCelebration, updateCelebration, getCelebration, deleteCelebration } from '@/services/celebrations';
 import { createSlides } from '@/services/slides';
 import { createPaymentRecord } from '@/services/payments';
-import { uploadPhoto, uploadVoiceNote, uploadMusic } from '@/services/storage';
+import { uploadPhoto, uploadVoiceNote, uploadMusic, uploadVideo } from '@/services/storage';
 import { motion } from 'framer-motion';
 import { triggerCelebration } from './MicroCelebration';
 import { getTierConfig, TIERS } from '@/lib/tiers';
@@ -72,9 +72,17 @@ const PreviewStep = () => {
       // ─── Phase 1: CLIENT-SIDE PREP (no server cost, cancellable) ───
       setPublishStep('Preparing photos...');
 
+      // Respect the tier's photo cap here too — UI already limits uploads but
+      // truncating at publish time protects against stale state or devtools
+      // manipulation reaching Firestore. -1 means unlimited.
+      const tierCfgEarly = getTierConfig(draft.tier || 'free');
+      const allowedPhotos = tierCfgEarly.maxPhotos === -1
+        ? draft.photos
+        : draft.photos.slice(0, tierCfgEarly.maxPhotos);
+
       // Compress photos client-side before uploading
       const compressedPhotos: { blob: Blob; caption: string }[] = [];
-      for (const photo of draft.photos) {
+      for (const photo of allowedPhotos) {
         if (cancelledRef.current) return cleanup();
         const compressed = await compressImage(photo.file);
         compressedPhotos.push({ blob: compressed, caption: photo.caption });
@@ -146,7 +154,13 @@ const PreviewStep = () => {
       // ─── Phase 3: Upload files IN PARALLEL ───
       setPublishStep(`Uploading ${compressedPhotos.length} photo${compressedPhotos.length !== 1 ? 's' : ''}...`);
 
-      const [photoUrls, voiceNoteUrl, customMusicUrl] = await Promise.all([
+      // Only upload tier-gated assets if the user's current tier allows them.
+      // (UI already hides the pickers, but re-check here so a downgrade
+      // between ContentStep and publish doesn't leak a paid-only asset.)
+      const shouldUploadMusic = tierCfgEarly.hasCustomMusic && draft.customMusicFile;
+      const shouldUploadVideo = tierCfgEarly.hasVideo && draft.videoFile;
+
+      const [photoUrls, voiceNoteUrl, customMusicUrl, videoUrl] = await Promise.all([
         Promise.all(compressedPhotos.map((p) =>
           uploadPhoto(celebrationId, new File([p.blob], 'photo.webp', { type: 'image/webp' }))
             .catch(() => '') // skip failed uploads
@@ -154,8 +168,11 @@ const PreviewStep = () => {
         draft.voiceNoteBlob
           ? uploadVoiceNote(celebrationId, draft.voiceNoteBlob).catch(() => null)
           : Promise.resolve(null),
-        draft.customMusicFile
-          ? uploadMusic(celebrationId, draft.customMusicFile).catch(() => null)
+        shouldUploadMusic
+          ? uploadMusic(celebrationId, draft.customMusicFile!).catch(() => null)
+          : Promise.resolve(null),
+        shouldUploadVideo
+          ? uploadVideo(celebrationId, draft.videoFile!).catch(() => null)
           : Promise.resolve(null),
       ]);
 
@@ -225,6 +242,18 @@ const PreviewStep = () => {
         return cleanup();
       }
 
+      // Sanitize tier-gated fields right before the write. Mirrors the UI
+      // gates so a downgrade mid-flow or a manipulated draft can't leak a
+      // paid-only value into Firestore. Keep this list in sync with the
+      // gates in PreviewStep JSX and tier config.
+      const gatedScheduledReveal = tierConfig.hasScheduledReveal && scheduledDate
+        ? new Date(scheduledDate).toISOString()
+        : null;
+      const gatedCustomSlug = tierConfig.hasCustomSlug ? customSlug : '';
+      const gatedPassword = tierConfig.hasPasswordProtection ? hashedPassword : null;
+      const gatedCustomMusicUrl = tierConfig.hasCustomMusic ? customMusicUrl : null;
+      const gatedVideoUrl = tierConfig.hasVideo ? videoUrl : null;
+
       await Promise.all([
         updateCelebration(celebrationId, {
           recipientPhotoUrl: photoUrls[0] || null,
@@ -236,15 +265,16 @@ const PreviewStep = () => {
           voiceNoteUrl,
           voiceNoteDurationMs: draft.voiceNoteDuration || null,
           musicTrackId: draft.musicTrackId || null,
-          customMusicUrl,
+          customMusicUrl: gatedCustomMusicUrl,
+          videoUrl: gatedVideoUrl,
           giftTitle: draft.giftTitle || null,
           giftUrl: draft.giftUrl || null,
           giftDescription: draft.giftDescription || null,
           tier: draft.tier || 'free',
           expiresAt,
-          scheduledRevealAt: scheduledDate ? new Date(scheduledDate).toISOString() : null,
-          ...(customSlug ? { slug: customSlug, customSlug } : {}),
-          password: hashedPassword,
+          scheduledRevealAt: gatedScheduledReveal,
+          ...(gatedCustomSlug ? { slug: gatedCustomSlug, customSlug: gatedCustomSlug } : {}),
+          password: gatedPassword,
           status: 'published',
           publishedAt: new Date().toISOString(),
         }),
@@ -396,10 +426,11 @@ const PreviewStep = () => {
           <p className="font-display text-base font-bold text-gray-800 mb-2">Password protect 🔒</p>
           <p className="font-body text-xs text-gray-500 mb-3">Leave empty for no password</p>
           <input
-            type="text"
+            type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Set a password (optional)"
+            autoComplete="new-password"
             className="w-full font-body text-sm px-4 py-3 rounded-xl border border-purple-200 focus:outline-none focus:ring-2 focus:ring-pink-200"
           />
         </div>
