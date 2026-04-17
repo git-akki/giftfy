@@ -1,5 +1,8 @@
 # Giftfy — Digital Gift Pages
 
+[![CI](https://github.com/git-akki/giftfy/actions/workflows/ci.yml/badge.svg)](https://github.com/git-akki/giftfy/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 A web app for creating personalized digital gift pages (birthdays, anniversaries, thank-yous) that can be shared via a link. Built with React, TypeScript, Vite, Tailwind CSS, shadcn/ui, Firebase, and Razorpay.
 
 ## Features
@@ -298,6 +301,16 @@ Make sure `.env.local` is **not** committed (it's already in `.gitignore`).
 - Payments run in Razorpay **Test Mode** — see the Razorpay section above.
 - The `.env.local` file and any real credentials are git-ignored.
 - Demo mode stores everything in browser localStorage under keys prefixed `giftfy_demo_*`.
+
+## Contributing
+
+PRs welcome. A few pointers:
+
+- Open an issue first for anything non-trivial (use the [Bug report](https://github.com/git-akki/giftfy/issues/new?template=bug_report.yml) or [Feature request](https://github.com/git-akki/giftfy/issues/new?template=feature_request.yml) templates).
+- Read [docs/DATA-MODEL.md](docs/DATA-MODEL.md) before changing schema or Firestore rules — it's the single source of truth.
+- Run `npm run build` locally before pushing. CI runs the same on every PR.
+- See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) — be kind.
+- Questions without a clear issue? Open a [Discussion](https://github.com/git-akki/giftfy/discussions).
 
 ## License
 

@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel outdated runs on the same branch so the last push is what gets tested.
+# Uses only safe system contexts (github.workflow, github.ref) — no untrusted input.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build + lint + test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      # Demo mode lets the app boot without real Firebase / Razorpay keys.
+      # The placeholder values in src/lib/firebase.ts keep initializeApp happy.
+      VITE_DEMO_MODE: 'true'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        # Don't block CI on lint while the codebase stabilises.
+        # Flip to `continue-on-error: false` (default) once warnings are cleaned up.
+        continue-on-error: true
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
