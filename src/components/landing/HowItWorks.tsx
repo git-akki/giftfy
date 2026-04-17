@@ -16,7 +16,7 @@ const HowItWorks = () => {
             It's ridiculously easy 🤭
           </h2>
           <p className="font-body text-lg text-gray-400">
-            Three steps. Two minutes. One happy giftfy.
+            Three steps. Two minutes. One happy recipient.
           </p>
         </motion.div>
 

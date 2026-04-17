@@ -17,7 +17,7 @@ const LiveDemo = () => {
           className="text-center mb-12"
         >
           <h2 className="font-display text-4xl sm:text-5xl font-bold text-gradient-giftfy mb-4">
-            See what your giftfy will see 👀
+            See what your recipient will see 👀
           </h2>
           <p className="font-body text-lg text-gray-400 max-w-md mx-auto">
             This is the magic moment when they open your gift
