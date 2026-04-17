@@ -301,4 +301,4 @@ Make sure `.env.local` is **not** committed (it's already in `.gitignore`).
 
 ## License
 
-Shared as a college project. Use freely for learning and academic purposes.
+[MIT](LICENSE) — free to use, modify, and distribute. Shared as a college project; use for learning, academic, or commercial purposes.

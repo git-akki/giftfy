@@ -1,0 +1,43 @@
+name: Feature request
+description: Suggest an idea
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What's the problem?
+      description: What are you trying to do that the app doesn't support today?
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: What would you like to see?
+      description: A description of the feature or change.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you've considered
+
+  - type: dropdown
+    id: tier
+    attributes:
+      label: Which tier would this live in?
+      options:
+        - Free
+        - Sweet
+        - Premium
+        - Deluxe
+        - Cross-cutting / platform
+        - Not sure
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Mockups, references, or related issues.

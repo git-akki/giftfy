@@ -1,0 +1,65 @@
+name: Bug report
+description: Something's broken
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Please fill in what you can — incomplete reports still help.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug.
+      placeholder: "When I click Publish on a Deluxe gift, …"
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      value: |
+        1. Go to '…'
+        2. Click on '…'
+        3. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Mode
+      description: Which backend are you running?
+      options:
+        - Demo mode (VITE_DEMO_MODE=true)
+        - Firebase + Razorpay (real)
+        - Don't know
+    validations:
+      required: true
+
+  - type: input
+    id: browser
+    attributes:
+      label: Browser / OS
+      placeholder: "Chrome 130 / macOS 14.5"
+
+  - type: textarea
+    id: console
+    attributes:
+      label: Console / network errors
+      description: Paste relevant browser devtools output.
+      render: text
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Anything else?
+      description: Screenshots, links, or context.

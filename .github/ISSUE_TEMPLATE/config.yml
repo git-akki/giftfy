@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Data model questions
+    url: https://github.com/git-akki/giftfy/blob/main/docs/DATA-MODEL.md
+    about: The canonical data model — start here if you have schema or field questions.
+  - name: Production setup
+    url: https://github.com/git-akki/giftfy/blob/main/docs/PRODUCTION-CHECKLIST.md
+    about: Ship-blockers and checklist before running with real users.
